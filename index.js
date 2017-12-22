@@ -12,37 +12,37 @@ var trigger = require("./lib/events/trigger.js")
 var defaultSwitches = require("./lib/switches")
 
 
-var Pjax = function(options) {
-    this.firstrun = true
+var Pjax = function (options) {
+  this.firstrun = true
 
-    var parseOptions = require("./lib/proto/parse-options.js");
-    parseOptions.apply(this,[options])
-    this.log("Pjax options", this.options)
+  var parseOptions = require("./lib/proto/parse-options.js");
+  parseOptions.apply(this, [options])
+  this.log("Pjax options", this.options)
 
-    this.maxUid = this.lastUid = newUid()
+  this.maxUid = this.lastUid = newUid()
 
-    this.parseDOM(document)
+  this.parseDOM(document)
 
-    on(window, "popstate", function(st) {
-      if (st.state) {
-        var opt = clone(this.options)
-        opt.url = st.state.url
-        opt.title = st.state.title
-        opt.history = false
-        opt.requestOptions = {};
-        if (st.state.uid < this.lastUid) {
-          opt.backward = true
-        }
-        else {
-          opt.forward = true
-        }
-        this.lastUid = st.state.uid
-
-        // @todo implement history cache here, based on uid
-        this.loadUrl(st.state.url, opt)
+  on(window, "popstate", function (st) {
+    if (st.state) {
+      var opt = clone(this.options)
+      opt.url = st.state.url
+      opt.title = st.state.title
+      opt.history = false
+      opt.requestOptions = {};
+      if (st.state.uid < this.lastUid) {
+        opt.backward = true
       }
-    }.bind(this))
-  }
+      else {
+        opt.forward = true
+      }
+      this.lastUid = st.state.uid
+
+      // @todo implement history cache here, based on uid
+      this.loadUrl(st.state.original_url, opt)
+    }
+  }.bind(this))
+}
 
 Pjax.switches = defaultSwitches
 
@@ -61,11 +61,11 @@ Pjax.prototype = {
 
   attachForm: require("./lib/proto/attach-form.js"),
 
-  forEachSelectors: function(cb, context, DOMcontext) {
+  forEachSelectors: function (cb, context, DOMcontext) {
     return require("./lib/foreach-selectors.js").bind(this)(this.options.selectors, cb, context, DOMcontext)
   },
 
-  switchSelectors: function(selectors, fromEl, toEl, options) {
+  switchSelectors: function (selectors, fromEl, toEl, options) {
     return require("./lib/switches-selectors.js").bind(this)(this.options.switches, this.options.switchesOptions, selectors, fromEl, toEl, options)
   },
 
@@ -78,16 +78,16 @@ Pjax.prototype = {
 //     Pjax.executeScripts(document.querySelector("body"))
 //   }
 
-  latestChance: function(href) {
+  latestChance: function (href) {
     window.location = href
   },
 
-  onSwitch: function() {
+  onSwitch: function () {
     this.parseDOM(document)
     trigger(window, "resize scroll")
   },
 
-  loadContent: function(html, options) {
+  loadContent: function (html, options) {
     var tmpEl = document.implementation.createHTMLDocument("pjax")
 
     // parse HTML attributes to copy them
@@ -99,7 +99,7 @@ Pjax.prototype = {
       matches = matches[0].match(htmlAttribsRegex)
       if (matches.length) {
         matches.shift()
-        matches.forEach(function(htmlAttrib) {
+        matches.forEach(function (htmlAttrib) {
           var attr = htmlAttrib.trim().split("=")
           if (attr.length === 1) {
             tmpEl.documentElement.setAttribute(attr[0], true)
@@ -119,7 +119,8 @@ Pjax.prototype = {
     if (document.activeElement && !document.activeElement.value) {
       try {
         document.activeElement.blur()
-      } catch (e) { }
+      } catch (e) {
+      }
     }
 
     // try {
@@ -136,8 +137,8 @@ Pjax.prototype = {
     }
 
     // execute scripts when DOM have been completely updated
-    this.options.selectors.forEach(function(selector) {
-      forEachEls(document.querySelectorAll(selector), function(el) {
+    this.options.selectors.forEach(function (selector) {
+      forEachEls(document.querySelectorAll(selector), function (el) {
         executeScripts(el)
       })
     })
@@ -152,16 +153,16 @@ Pjax.prototype = {
 
   doRequest: require("./lib/request.js"),
 
-  loadUrl: function(href, options) {
+  loadUrl: function (href, options) {
     this.log("load href", href, options)
 
     trigger(document, "pjax:send", options);
 
     // Do the request
-    this.doRequest(href, options.requestOptions, function(html) {
+    this.doRequest(href, options.requestOptions, function (html) {
       // Fail if unable to load HTML via AJAX
       if (html === false) {
-        trigger(document,"pjax:complete pjax:error", options)
+        trigger(document, "pjax:complete pjax:error", options)
 
         return
       }
@@ -190,30 +191,38 @@ Pjax.prototype = {
           this.lastUid = this.maxUid = newUid()
           this.firstrun = false
           window.history.replaceState({
-            url: window.location.href,
-            title: document.title,
-            uid: this.maxUid
-          },
-          document.title)
+              url: window.location.href,
+              original_url: window.location.href,
+              title: document.title,
+              uid: this.maxUid
+            },
+            document.title)
         }
 
         // Update browser history
-        this.lastUid = this.maxUid = newUid()
+        var el = document.createElement("a");
+        var _href = href;
+        el.href = href;
+        if (el.protocol !== window.location.protocol || el.host !== window.location.host) {
+          _href = window.location.protocol + "//" + window.location.host + el.pathname;
+        }
+        this.lastUid = this.maxUid = newUid();
         window.history.pushState({
-          url: href,
-          title: options.title,
-          uid: this.maxUid
-        },
+            url: _href,
+            original_url: href,
+            title: options.title,
+            uid: this.maxUid
+          },
           options.title,
-          href)
+          _href)
       }
 
-      this.forEachSelectors(function(el) {
+      this.forEachSelectors(function (el) {
         this.parseDOM(el)
       }, this)
 
       // Fire Events
-      trigger(document,"pjax:complete pjax:success", options)
+      trigger(document, "pjax:complete pjax:success", options)
 
       options.analytics()
 
@@ -238,7 +247,8 @@ if (Pjax.isSupported()) {
 }
 // if there isn’t required browser functions, returning stupid api
 else {
-  var stupidPjax = function() {}
+  var stupidPjax = function () {
+  }
   for (var key in Pjax.prototype) {
     if (Pjax.prototype.hasOwnProperty(key) && typeof Pjax.prototype[key] === "function") {
       stupidPjax[key] = stupidPjax
