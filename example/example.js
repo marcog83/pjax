@@ -20,7 +20,8 @@ document.addEventListener("pjax:success", function() {
 document.addEventListener("DOMContentLoaded", function() {
   var pjax = new Pjax({
     elements: [".js-Pjax"],
-    selectors: [".body"]
+    selectors: ["body"]
+      ,cors:"http://localhost:4900/"
     // currentUrlFullReload: true,
   })
   console.log("Pjax initialized.", pjax)

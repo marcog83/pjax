@@ -205,6 +205,12 @@ Pjax.prototype = {
         el.href = href;
         if (el.protocol !== window.location.protocol || el.host !== window.location.host) {
           _href = window.location.protocol + "//" + window.location.host + el.pathname;
+        } else if (el.pathname === window.location.pathname && el.hash.length > 0) {
+          if (options.cors) {
+            href = options.cors + el.hash.replace("#", "");
+          }
+          _href = window.location.href + el.hash;
+
         }
         this.lastUid = this.maxUid = newUid();
         window.history.pushState({
